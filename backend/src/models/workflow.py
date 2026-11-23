@@ -15,15 +15,26 @@ class Observation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+class Assignment(Base):
+    __tablename__ = 'assignments'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_key: Mapped[str] = mapped_column(String(96), unique=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class AnalysisRun(Base):
     __tablename__ = 'analysis_runs'
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(120))
     owner: Mapped[str] = mapped_column(String(60))
     parameters: Mapped[dict] = mapped_column(JSON)
+    method: Mapped[str | None] = mapped_column(String(16), nullable=True)
     last_observation_id: Mapped[int] = mapped_column(Integer)
     sample_size: Mapped[int] = mapped_column(Integer)
     observation_ids: Mapped[list] = mapped_column(JSON)
+    assignment_ids: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    last_assignment_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default=RunStatus.QUEUED, index=True)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)

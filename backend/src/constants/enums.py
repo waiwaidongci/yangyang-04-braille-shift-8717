@@ -13,6 +13,11 @@ class RunStatus(StrEnum):
     FAILED = 'failed'
 
 
+class Method(StrEnum):
+    LEGACY = 'v1'
+    STRATIFIED = 'v2'
+
+
 class Decision(StrEnum):
     APPROVED = 'approved'
     RETURNED = 'returned'

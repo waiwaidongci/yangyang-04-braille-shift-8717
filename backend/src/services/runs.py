@@ -4,10 +4,11 @@ import logging
 from sqlalchemy import select
 
 from src.config.project import SPEC
-from src.constants.enums import Decision, Role, RunStatus
-from src.domain.analysis import analyze
+from src.constants.enums import Decision, Method, Role, RunStatus
+from src.domain.analysis import analyze, analyze_stratified
 from src.models.base import utc_now
-from src.models.workflow import AnalysisRun, AuditEvent, Observation, Review
+from src.models.workflow import AnalysisRun, Assignment, AuditEvent, Observation, Review
+from src.services.assignments import effective_assignments
 from src.services.errors import BusinessError
 from src.services.validation import validated
 
@@ -19,12 +20,33 @@ def create_run(db, request, actor):
     sample_ids = list(db.scalars(select(Observation.id).order_by(Observation.id)))
     if not sample_ids:
         raise BusinessError('请先导入观测记录')
-    item = AnalysisRun(title=request.title, owner=actor, parameters=parameters, observation_ids=sample_ids,
-                       last_observation_id=sample_ids[-1], sample_size=len(sample_ids))
+    sheet = effective_assignments(db)
+    if not sheet:
+        raise BusinessError('请先登记或导入班组随机分派表')
+    assignment_ids = [item.id for item in sheet]
+    item = AnalysisRun(title=request.title, owner=actor, parameters=parameters,
+                       observation_ids=sample_ids, last_observation_id=sample_ids[-1],
+                       sample_size=len(sample_ids), method=Method.STRATIFIED,
+                       assignment_ids=assignment_ids, last_assignment_id=assignment_ids[-1])
     db.add(item)
     db.flush()
-    db.add(AuditEvent(actor=actor, action='run.created', detail=f'分析 #{item.id}，固化 {item.sample_size} 条观测'))
+    db.add(AuditEvent(actor=actor, action='run.created',
+                      detail=f'分析 #{item.id}，固化 {item.sample_size} 条观测、{len(assignment_ids)} 条班组分派'))
     return item
+
+
+def retry_run(db, run_id, actor):
+    row = db.get(AnalysisRun, run_id, with_for_update=True)
+    if row is None:
+        raise BusinessError('分析不存在', 404)
+    if row.status != RunStatus.FAILED:
+        raise BusinessError('只有计算失败的分析可以按原依据重试', 409)
+    row.status = RunStatus.QUEUED
+    row.result = None
+    row.error = None
+    row.finished_at = None
+    db.add(AuditEvent(actor=actor, action='run.retried', detail=f'分析 #{run_id} 沿用发起时的依据重试'))
+    return row
 
 
 def visible_runs(db, user, run_id=None):
@@ -64,7 +86,12 @@ def run_pending(db):
     try:
         sample = list(db.scalars(select(Observation.payload).where(Observation.id.in_(item.observation_ids))
                                  .order_by(Observation.id)))
-        result = analyze(sample, item.parameters)
+        if (item.method or Method.LEGACY) == Method.STRATIFIED:
+            sheet = list(db.scalars(select(Assignment.payload).where(Assignment.id.in_(item.assignment_ids or []))
+                                    .order_by(Assignment.id)))
+            result = analyze_stratified(sample, sheet, item.parameters)
+        else:
+            result = analyze(sample, item.parameters)
         if not {'headline', 'summary', 'metrics', 'columns', 'rows'} <= set(result):
             raise RuntimeError('invalid result schema')
         json.dumps(result, allow_nan=False, ensure_ascii=False)

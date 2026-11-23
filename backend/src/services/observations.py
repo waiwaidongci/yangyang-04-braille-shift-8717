@@ -30,14 +30,14 @@ def content_key(row):
     return 'data:' + hashlib.sha256(json.dumps(row, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
-def parse_csv(raw):
+def parse_csv(raw, fields, clean):
     if len(raw) > 512 * 1024:
         raise BusinessError('CSV 文件上限 512 KB', 413)
     try:
         reader = csv.DictReader(io.StringIO(raw.decode('utf-8-sig')), strict=True)
         header = reader.fieldnames or []
-        known = {item['key'] for item in SPEC['fields']}
-        required = {item['key'] for item in SPEC['fields'] if item.get('required', True)}
+        known = {item['key'] for item in fields}
+        required = {item['key'] for item in fields if item.get('required', True)}
         if len(set(header)) != len(header) or not required.issubset(header) or not set(header).issubset(known):
             raise BusinessError('CSV 表头与导入模板不匹配')
         rows = []
@@ -45,13 +45,13 @@ def parse_csv(raw):
             try:
                 if None in row or any(value is None for value in row.values()):
                     raise BusinessError('列数与表头不匹配')
-                rows.append(clean_observation(row))
+                rows.append(clean(row))
             except BusinessError as exc:
                 raise BusinessError(f'CSV 第 {reader.line_num} 行，{exc}') from exc
             if len(rows) > 500:
                 raise BusinessError('单次导入上限 500 条')
         if not rows:
-            raise BusinessError('CSV 里没有观测记录')
+            raise BusinessError('CSV 里没有记录')
         return rows
     except (UnicodeDecodeError, csv.Error) as exc:
         raise BusinessError('请上传 UTF-8 编码的有效 CSV') from exc

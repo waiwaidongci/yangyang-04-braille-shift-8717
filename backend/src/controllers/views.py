@@ -8,15 +8,20 @@ def review_view(item):
 
 def run_view(item, review=None, *, include_result=False):
     view = {'id': item.id, 'title': item.title, 'owner': item.owner, 'status': item.status,
-            'parameters': item.parameters, 'sample_size': item.sample_size,
-            'snapshot_id': item.last_observation_id, 'created_at': timestamp(item.created_at),
-            'finished_at': timestamp(item.finished_at), 'review': review_view(review), 'error': item.error}
+            'method': item.method or 'v1', 'parameters': item.parameters, 'sample_size': item.sample_size,
+            'snapshot_id': item.last_observation_id, 'assignment_snapshot_id': item.last_assignment_id,
+            'created_at': timestamp(item.created_at), 'finished_at': timestamp(item.finished_at),
+            'review': review_view(review), 'error': item.error}
     if include_result:
         view['result'] = item.result
     return view
 
 
 def observation_view(item):
+    return {'id': item.id, 'data': item.payload, 'created_at': timestamp(item.created_at)}
+
+
+def assignment_view(item):
     return {'id': item.id, 'data': item.payload, 'created_at': timestamp(item.created_at)}
 
 

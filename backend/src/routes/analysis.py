@@ -9,7 +9,7 @@ from src.schemas.requests import CreateRun, ReviewInput
 from src.services.auth import current_user, roles
 from src.services.broker import wake_worker
 from src.services.errors import BusinessError
-from src.services.runs import create_run, submit_review, visible_runs
+from src.services.runs import create_run, retry_run, submit_review, visible_runs
 from src.utils.formatting import csv_text
 
 router = APIRouter(prefix='/api/runs')
@@ -41,6 +41,14 @@ def detail(run_id: int, user=Depends(current_user)):
 def decision(run_id: int, request: ReviewInput, user=Depends(roles(Role.SUPERVISOR))):
     with Session.begin() as db:
         return review_view(submit_review(db, run_id, request, user['sub']))
+
+
+@router.post('/{run_id}/retry')
+def retry(run_id: int, user=Depends(roles(Role.ANALYST))):
+    with Session.begin() as db:
+        view = run_view(retry_run(db, run_id, user['sub']))
+    wake_worker()
+    return view
 
 
 @router.get('/{run_id}/export')

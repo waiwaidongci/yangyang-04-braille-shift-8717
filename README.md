@@ -1,10 +1,10 @@
 # 晨页盲文·双面压印班组试验
 
-随机化单位是班组，用班组均值做精确置换比较压印耗时，另看错点率护栏，归档试验放行建议。
+随机化单位是班组，按机型分层抽签，用班组均值做精确置换比较压印耗时，另看错点率护栏，归档试验放行建议。
 
 ## 模拟场景
 
-[业务剧本](yangyang-business.md)记录模拟团队、上游观测、统计口径和交接去向。四个工作模块包括数据台账、分析任务、结果与复核、报表分发。数据从合成种子或 UTF-8 CSV 进入。分析员提交后，Python worker 对固化观测清单计算。负责人签核，随后可以下载结果或把报告定时投递到本地收件箱。
+[业务剧本](yangyang-business.md)记录模拟团队、上游观测、统计口径和交接去向。四个工作模块包括数据台账、分析任务、结果与复核、报表分发。工票和班组随机分派表从合成种子或 UTF-8 CSV 进入，两者谁先到都能收。分析员提交后，Python worker 对提交时固化的观测清单与分派表计算：先用分派表对账，缺班或分派冲突列入结果，对齐后按各机型原定的两组班数做单侧精确置换检验。晚到的工票和分派订正只进入新分析，失败重试沿用发起时的两份依据。负责人签核，随后可以下载结果或把报告定时投递到本地收件箱。2026-11-23 前的旧分析仍按原完全随机方法查看和重试。
 
 ## 启动
 
@@ -36,7 +36,7 @@ docker compose exec -T backend python -m scripts.seed_demo
 | db | MySQL 8.0 | 观测、快照、签核、分发计划和审计 |
 | redis | Redis 7 | 唤醒、心跳和登录限流 |
 
-在 `backend` 中可用 `pip install -r requirements.txt` 安装本地依赖，设置 `DATABASE_URL`、`REDIS_URL` 和可写 `ARTIFACT_ROOT` 后运行 `uvicorn src.main:app --port 8000`，计算进程运行 `python -m src.worker`。前端修改在 `frontend/src`，用 `docker compose up -d --build frontend` 通过 Nginx 检查同源代理。业务输入定义在 `backend/src/domain/spec.json`，算法在同目录的 `analysis.py`。角色、任务状态和签核状态在后端 `backend/src/constants/enums.py` 和前端 `frontend/src/constants/enums.js` 共同定义。数据库表在 `backend/src/models/workflow.py`。
+在 `backend` 中可用 `pip install -r requirements.txt` 安装本地依赖，设置 `DATABASE_URL`、`REDIS_URL` 和可写 `ARTIFACT_ROOT` 后运行 `uvicorn src.main:app --port 8000`，计算进程运行 `python -m src.worker`。前端修改在 `frontend/src`，用 `docker compose up -d --build frontend` 通过 Nginx 检查同源代理。业务输入定义在 `backend/src/domain/spec.json`，算法在同目录的 `analysis.py`（`analyze` 为旧完全随机口径，`analyze_stratified` 为现行机型分层口径）。角色、任务状态和签核状态在后端 `backend/src/constants/enums.py` 和前端 `frontend/src/constants/enums.js` 共同定义。数据库表在 `backend/src/models/workflow.py`。
 
 分发计划锁定特定已签核快照，按北京时间显示。收件箱可下载真实 CSV，当前收件组是本地交接标签。停机跨过多个周期时补送最早未投递的一期，然后追到下一个将来的周期。新快照需重新签核并建新计划。
 
