@@ -1,0 +1,23 @@
+{
+  "organization": "晨页盲文",
+  "tagline": "双面压印班组试验",
+  "source": "晨页盲文工艺组、压印工票与质检抽点记录（模拟）",
+  "record_name": "百张压印工票",
+  "algorithm": "班组均值的单侧精确随机化检验与错点率护栏",
+  "formula": "每班组先取百张耗时均值，各组内班组等权。节省耗时 = 现行组均值 − 试验组均值。固定两组班组数，p = 节省耗时不小于实测值的分派数 ÷ 总分派数。错点率（%）= 100 × 错点总数 ÷ 抽检总点数。",
+  "decision_prompt": "试验参数能否在错点率守住上限的前提下，让双面压印提速到值得安排下一班次限量试产？",
+  "fields": [
+    {"key": "ticket", "label": "工票编号", "type": "text", "example": "CY-2611-05-09", "help": "全场唯一，每张工票覆盖同规格的 100 张纸。"},
+    {"key": "team", "label": "压印班组", "type": "text", "example": "压印五班", "help": "沿用随机分派表上的班组名称。"},
+    {"key": "arm", "label": "班组分派参数", "type": "choice", "choices": ["现行参数", "试验参数"], "example": "试验参数", "help": "同一班组的全部工票必须沿用同一分派。"},
+    {"key": "work_date", "label": "压印日期", "type": "date", "example": "2026-11-17"},
+    {"key": "seconds", "label": "百张压印耗时（秒）", "type": "number", "min": 1, "max": 7200, "example": 660, "help": "从首张进纸到第 100 张出纸的秒数。"},
+    {"key": "checked_dots", "label": "抽检点数（点）", "type": "integer", "min": 1, "max": 1000000, "example": 2500},
+    {"key": "error_dots", "label": "错点数（点）", "type": "integer", "min": 0, "max": 1000000, "example": 10, "help": "同一工票漏点和多点合计，最多等于抽检点数。"}
+  ],
+  "parameters": [
+    {"key": "alpha", "label": "单侧显著性水平 α（0–1）", "type": "number", "min": 0.001, "max": 0.2, "default": 0.05, "help": "p 值不高于该水平时通过提速证据门槛。"},
+    {"key": "min_gain_seconds", "label": "最低节省耗时（秒/百张）", "type": "number", "min": 0, "max": 7200, "default": 60, "help": "用现行组均值减试验组均值，衡量可用的节拍收益。"},
+    {"key": "max_error_pct", "label": "试验组错点率上限（%）", "type": "number", "min": 0, "max": 100, "default": 0.5, "help": "填百分数，例如 0.5 表示每千点最多错 5 点。"}
+  ]
+}

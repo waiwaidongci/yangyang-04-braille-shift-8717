@@ -1,0 +1,11 @@
+:root {
+  --ink: oklch(.235 .048 75);
+  --paper: oklch(.954 .022 75);
+  --light: oklch(.987 .009 75);
+  --accent: oklch(.405 .116 60);
+  --wash: oklch(.918 .034 60);
+  --sheet-pattern: radial-gradient(circle at 5px 5px, oklch(1 0 0 / .13) 0 1px, transparent 1.6px);
+  --sheet-size: 13px 13px;
+  --radius: 3px;
+  --login-ratio: 1.35fr 1fr;
+}
